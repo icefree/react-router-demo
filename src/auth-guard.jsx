@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, useNavigate, Outlet } from 'react-router-dom';
 
 // ==================== 1. 全局认证状态管理 ====================
 // 使用 Context 管理用户登录状态和角色信息
@@ -36,28 +36,50 @@ function useAuth() {
 // ==================== 2. 路由守卫组件 ====================
 // 🔥 这是核心！面试重点
 
+// 🔥 方案1：ProtectedLayout - 用于嵌套路由的 Layout 组件
+// 只检查登录状态，通过 Outlet 渲染子路由
+function ProtectedLayout() {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  
+  // ✅ 使用 Outlet 渲染匹配的子路由
+  return <Outlet />;
+}
+
+// 🔥 方案2：RoleGuard - 用于检查角色的包裹组件
+// 只检查角色，不检查登录（因为父层 ProtectedLayout 已经检查过了）
+function RoleGuard({ children, allowedRoles }) {
+  const { user } = useAuth();
+  
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  
+  if (!roles.includes(user.role)) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  
+  return children;
+}
+
+// 🔥 方案3：ProtectedRoute - 原来的包裹式组件（兼容旧写法）
 function ProtectedRoute({ children, requiredRole }) {
   const { user } = useAuth();
   const location = useLocation();
   
-  // 🔥 情况1：用户未登录
   if (!user) {
-    // 跳转到登录页，并保存当前位置（登录后可以跳回来）
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
-  // 🔥 情况2：需要特定角色
   if (requiredRole) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    
-    // 检查用户角色是否在允许的角色列表中
     if (!roles.includes(user.role)) {
-      // 已登录但角色不匹配 → 403 禁止访问
       return <Navigate to="/forbidden" replace />;
     }
   }
   
-  // 🔥 情况3：权限验证通过，渲染目标组件
   return children;
 }
 
@@ -201,46 +223,32 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/forbidden" element={<Forbidden />} />
               
-              {/* ========== 需要登录的路由 ========== */}
-              {/* 🔥 不传 requiredRole = 只要登录就行 */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/profile" 
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* ========== 需要特定角色的路由 ========== */}
-              {/* 🔥 传入角色数组：editor 或 admin */}
-              <Route 
-                path="/editor" 
-                element={
-                  <ProtectedRoute requiredRole={['editor', 'admin']}>
-                    <Editor />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* 🔥 只有 admin */}
-              <Route 
-                path="/admin" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminPanel />
-                  </ProtectedRoute>
-                } 
-              />
+              {/* ========== 🔥 嵌套路由方案：统一保护 ========== */}
+              {/* 父路由用 ProtectedLayout 检查登录，子路由无需重复包裹 */}
+              <Route element={<ProtectedLayout />}>
+                {/* 只需登录的路由 - 直接写 */}
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
+                
+                {/* 需要特定角色的路由 - 用 RoleGuard 包裹 element */}
+                <Route 
+                  path="/editor" 
+                  element={
+                    <RoleGuard allowedRoles={['editor', 'admin']}>
+                      <Editor />
+                    </RoleGuard>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin" 
+                  element={
+                    <RoleGuard allowedRoles="admin">
+                      <AdminPanel />
+                    </RoleGuard>
+                  } 
+                />
+              </Route>
             </Routes>
           </div>
         </div>
