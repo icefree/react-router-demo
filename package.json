@@ -2,7 +2,7 @@
   "name": "react-router-demo",
   "private": true,
   "version": "1.0.0",
-  "homepage": "https://rexwong.github.io/react-router-demo/",
+  "homepage": "https://icefree.github.io/react-router-demo/",
   "type": "module",
   "scripts": {
     "dev": "vite",
