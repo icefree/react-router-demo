@@ -17,7 +17,9 @@ const demos = [
     color: '#6366f1',
     gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
     tags: ['Outlet', '动态路由', 'useParams'],
-    component: NestedRouterApp
+    component: NestedRouterApp,
+    entryPath: '/nested',
+    demoProps: { basename: '/nested' }
   },
   {
     id: 'auth',
@@ -28,7 +30,9 @@ const demos = [
     color: '#ec4899',
     gradient: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
     tags: ['ProtectedRoute', 'Context', 'RBAC'],
-    component: AuthGuardApp
+    component: AuthGuardApp,
+    entryPath: '/auth',
+    demoProps: { basename: '/auth' }
   },
   {
     id: 'lazy',
@@ -39,7 +43,8 @@ const demos = [
     color: '#f59e0b',
     gradient: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
     tags: ['React.lazy', 'Suspense', '代码分割'],
-    component: LazyLoadApp
+    component: LazyLoadApp,
+    entryPath: '/lazy-load'
   },
   {
     id: 'programmatic',
@@ -50,7 +55,8 @@ const demos = [
     color: '#10b981',
     gradient: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
     tags: ['useNavigate', 'state', 'replace'],
-    component: ProgrammaticNavApp
+    component: ProgrammaticNavApp,
+    entryPath: '/programmatic-nav'
   },
   {
     id: 'cache',
@@ -61,17 +67,11 @@ const demos = [
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%)',
     tags: ['Keep-Alive', '状态缓存', 'display:none'],
-    component: RouteCacheApp
+    component: RouteCacheApp,
+    entryPath: '/cache',
+    demoProps: { basename: '/cache' }
   }
 ];
-
-const demoEntryPaths = {
-  nested: '/',
-  auth: '/',
-  lazy: '/lazy-load',
-  programmatic: '/programmatic-nav',
-  cache: '/',
-};
 
 function withBasePath(pathname) {
   const baseUrl = import.meta.env.BASE_URL || '/';
@@ -369,11 +369,12 @@ function DemoWrapper({ demoId, onBack }) {
   }
 
   const DemoComponent = demo.component;
+  const demoProps = demo.demoProps || {};
 
   return (
     <div style={{ position: 'relative' }}>
       <BackButton onClick={onBack} />
-      <DemoComponent />
+      <DemoComponent {...demoProps} />
     </div>
   );
 }
@@ -383,7 +384,8 @@ function App() {
   const [currentDemo, setCurrentDemo] = useState(null);
 
   const handleSelectDemo = (demoId) => {
-    syncBrowserPath(demoEntryPaths[demoId] || '/');
+    const demo = demos.find(d => d.id === demoId);
+    syncBrowserPath(demo?.entryPath || '/');
     setCurrentDemo(demoId);
   };
 

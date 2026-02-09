@@ -129,9 +129,9 @@ function NotFound() {
 
 
 // ==================== 路由配置 ====================
-function App() {
+function App({ basename = '/' }) {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <div style={{ padding: '20px', background: '#f5f5f5', minHeight: '100vh' }}>
         <nav style={{ marginBottom: '20px', padding: '10px', background: 'white' }}>
           <Link to="/" style={{ marginRight: '15px' }}>首页</Link>
