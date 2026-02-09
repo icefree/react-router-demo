@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation, useSearchParams, useParams } from 'react-router-dom';
 
 // ==================== 🎯 编程式导航完全指南 ====================
 /*
@@ -172,6 +172,7 @@ function TargetPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const params = useParams();  // 🔥 获取动态路由参数
   
   // 从 location.state 获取隐藏参数
   const state = location.state;
@@ -179,6 +180,34 @@ function TargetPage() {
   return (
     <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px' }}>
       <h2>🎯 目标页面</h2>
+      
+      {/* 🔥 显示动态路由参数 */}
+      <div style={{ background: '#fff', padding: '15px', borderRadius: '4px', marginBottom: '15px' }}>
+        <h3>🆔 路由参数 (useParams) 🔥面试重点</h3>
+        {Object.keys(params).length > 0 ? (
+          <>
+            <ul>
+              {Object.entries(params).map(([key, value]) => (
+                <li key={key}><strong>{key}</strong>: <code style={{ background: '#e3f2fd', padding: '2px 6px', borderRadius: '4px' }}>{value}</code></li>
+              ))}
+            </ul>
+            <pre style={{ background: '#f5f5f5', padding: '10px', marginTop: '10px', fontSize: '12px' }}>
+{`// 路由配置
+<Route path="/target/:id" element={<TargetPage />} />
+
+// 获取参数
+const params = useParams();
+console.log(params.id);  // "${params.id}"
+
+// 🔥 对比 Vue Router
+// Vue: this.$route.params.id
+// React: useParams().id`}
+            </pre>
+          </>
+        ) : (
+          <p style={{ color: '#999' }}>没有路由参数（试试访问 /target/123）</p>
+        )}
+      </div>
       
       {/* 显示当前路径信息 */}
       <div style={{ background: '#fff', padding: '15px', borderRadius: '4px', marginBottom: '15px' }}>
