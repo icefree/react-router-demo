@@ -65,6 +65,33 @@ const demos = [
   }
 ];
 
+const demoEntryPaths = {
+  nested: '/',
+  auth: '/',
+  lazy: '/lazy-load',
+  programmatic: '/programmatic-nav',
+  cache: '/',
+};
+
+function withBasePath(pathname) {
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+
+  if (!base || base === '/') {
+    return normalizedPath;
+  }
+
+  return `${base}${normalizedPath}`.replace(/\/{2,}/g, '/');
+}
+
+function syncBrowserPath(pathname) {
+  const fullPath = withBasePath(pathname);
+  if (window.location.pathname !== fullPath) {
+    window.history.replaceState(null, '', fullPath);
+  }
+}
+
 // ==================== 首页样式 ====================
 const styles = {
   container: {
@@ -264,8 +291,8 @@ function BackButton({ onClick }) {
       onMouseLeave={() => setIsHovered(false)}
       style={{
         position: 'fixed',
-        top: '20px',
-        left: '20px',
+        right: '20px',
+        bottom: '20px',
         zIndex: 9999,
         padding: '12px 20px',
         borderRadius: '12px',
@@ -356,10 +383,12 @@ function App() {
   const [currentDemo, setCurrentDemo] = useState(null);
 
   const handleSelectDemo = (demoId) => {
+    syncBrowserPath(demoEntryPaths[demoId] || '/');
     setCurrentDemo(demoId);
   };
 
   const handleBack = () => {
+    syncBrowserPath('/');
     setCurrentDemo(null);
   };
 
