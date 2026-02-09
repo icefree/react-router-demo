@@ -146,7 +146,7 @@ function App() {
           {/* ==================== Level 1 示例 ==================== */}
           <Route path="/dashboard" element={<Dashboard />}>
             {/* 🔥 index 路由：访问 /dashboard 时的默认子路由 */}
-            <Route index element={<div>请选择一个子页面</div>} />
+            <Route index element={<Navigate to="overview" />} />
             
             {/* 子路由：注意这里的 path 是相对路径，不需要加 / */}
             <Route path="overview" element={<Overview />} />

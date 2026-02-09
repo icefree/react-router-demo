@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, Outlet, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 // ==================== 1. 全局认证状态管理 ====================
 // 使用 Context 管理用户登录状态和角色信息
@@ -68,14 +68,16 @@ function ProtectedRoute({ children, requiredRole }) {
 function Login() {
   const { login } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // 获取跳转前的位置，登录后跳回去
   const from = location.state?.from?.pathname || '/';
   
   const handleLogin = (role) => {
     login('测试用户', role);
-    // 实际项目中，这里应该触发路由跳转
-    window.location.href = from; // 简化演示
+    // 🔥 使用 navigate 而不是 window.location.href
+    // window.location.href 会刷新页面，导致 React State (AuthContext) 丢失
+    navigate(from, { replace: true });
   };
   
   return (
@@ -180,135 +182,65 @@ function Profile() {
   );
 }
 
-// --- 以下是从 App.jsx 迁移过来的嵌套路由示例组件 ---
 
-function DashboardLayout() {
-  return (
-    <div style={{ padding: '20px', border: '2px solid blue' }}>
-      <h1>Dashboard (父组件)</h1>
-      <nav style={{ marginBottom: '20px', background: '#f0f0f0', padding: '10px' }}>
-        <Link to="overview" style={{ marginRight: '10px' }}>Overview</Link>
-        <Link to="settings" style={{ marginRight: '10px' }}>Settings</Link>
-        <Link to="profile">Profile</Link>
-      </nav>
-      <div style={{ border: '2px solid green', padding: '10px' }}>
-        <Outlet />
-      </div>
-    </div>
-  );
-}
-
-function Overview() {
-  return <div style={{ background: '#e8f5e9', padding: '10px' }}><h3>Overview 页面</h3></div>;
-}
-
-function Settings() {
-  return <div style={{ background: '#fff3e0', padding: '10px' }}><h3>Settings 页面</h3></div>;
-}
-
-function UsersLayout() {
-  return (
-    <div style={{ padding: '20px', border: '2px solid purple' }}>
-      <h1>用户管理</h1>
-      <nav style={{ background: '#e1bee7', padding: '10px', marginBottom: '10px' }}>
-        <Link to="list" style={{ marginRight: '10px' }}>用户列表</Link>
-        <Link to="create">创建用户</Link>
-      </nav>
-      <Outlet />
-    </div>
-  );
-}
-
-function UserList() {
-  const users = [{ id: 1, name: '张三' }, { id: 2, name: '李四' }];
-  return (
-    <div>
-      <h3>用户列表</h3>
-      <ul>
-        {users.map(u => (
-          <li key={u.id}><Link to={`${u.id}`}>{u.name}</Link></li>
-        ))}
-      </ul>
-      <Outlet />
-    </div>
-  );
-}
-
-function UserDetail() {
-  const { userId } = useParams();
-  return <div style={{ background: '#ffccbc', padding: '10px' }}><h4>用户详情 ID: {userId}</h4></div>;
-}
-
-function CreateUser() {
-  return <div><h3>创建用户</h3><button onClick={() => alert('保存成功')}>提交</button></div>;
-}
-
-
-
-
-// ==================== 4. 主应用 (方案升级：嵌套路由统一保护) ====================
+// ==================== 4. 主应用 ====================
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <div style={{ minHeight: '100vh', background: '#fafafa' }}>
+          {/* 导航栏 */}
           <Navigation />
           
+          {/* 路由配置 */}
           <div style={{ padding: '20px' }}>
             <Routes>
-              {/* ========== 公开路由 ========== */}
+              {/* ========== 公开路由（无需登录）========== */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/forbidden" element={<Forbidden />} />
               
-              {/* ========== 核心提效：嵌套路由统一保护 ========== */}
-              {/* 只要是 login 目录下的，全部需要登录 */}
-              <Route path="/app" element={
-                <ProtectedRoute>
-                  <div style={{ border: '2px dashed #999', padding: '10px' }}>
-                    <p style={{ color: '#999' }}>[受保护的布局区域]</p>
-                    <Outlet />
-                  </div>
-                </ProtectedRoute>
-              }>
-                {/* 这里的子路由会自动继承父路由的 ProtectedRoute 保护 */}
-                <Route path="profile" element={<Profile />} />
-                
-                {/* Dashboard 嵌套路由 */}
-                <Route path="dashboard" element={<DashboardLayout />}>
-                  <Route index element={<Navigate to="overview" replace />} />
-                  <Route path="overview" element={<Overview />} />
-                  <Route path="settings" element={<Settings />} />
-                  <Route path="profile" element={<Profile />} />
-                </Route>
-
-                {/* 用户管理：只有 admin 和 editor 可见 */}
-                <Route path="users" element={
-                  <ProtectedRoute requiredRole={['admin', 'editor']}>
-                    <UsersLayout />
+              {/* ========== 需要登录的路由 ========== */}
+              {/* 🔥 不传 requiredRole = 只要登录就行 */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Navigate to="list" replace />} />
-                  <Route path="list" element={<UserList />}>
-                    <Route path=":userId" element={<UserDetail />} />
-                  </Route>
-                  <Route path="create" element={<CreateUser />} />
-                </Route>
-              </Route>
-
-              {/* 只有 Admin 可访问的顶级目录 */}
-              <Route path="/admin-only" element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminPanel />
-                </ProtectedRoute>
-              } />
-
-              {/* 兼容旧路由（演示用） */}
-              <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-              <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
-              <Route path="/editor" element={<Navigate to="/app/users" replace />} />
-              <Route path="/admin" element={<Navigate to="/admin-only" replace />} />
+                } 
+              />
+              
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* ========== 需要特定角色的路由 ========== */}
+              {/* 🔥 传入角色数组：editor 或 admin */}
+              <Route 
+                path="/editor" 
+                element={
+                  <ProtectedRoute requiredRole={['editor', 'admin']}>
+                    <Editor />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* 🔥 只有 admin */}
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminPanel />
+                  </ProtectedRoute>
+                } 
+              />
             </Routes>
           </div>
         </div>
@@ -332,10 +264,10 @@ function Navigation() {
     }}>
       <div>
         <Link to="/" style={{ marginRight: '15px' }}>首页</Link>
-        <Link to="/app/dashboard" style={{ marginRight: '15px' }}>Dashboard (嵌套)</Link>
-        <Link to="/app/profile" style={{ marginRight: '15px' }}>个人资料</Link>
-        <Link to="/app/users" style={{ marginRight: '15px' }}>用户管理 (Admin/Editor)</Link>
-        <Link to="/admin-only" style={{ marginRight: '15px' }}>绝密后台 (Admin)</Link>
+        <Link to="/dashboard" style={{ marginRight: '15px' }}>Dashboard</Link>
+        <Link to="/profile" style={{ marginRight: '15px' }}>个人资料</Link>
+        <Link to="/editor" style={{ marginRight: '15px' }}>编辑器</Link>
+        <Link to="/admin" style={{ marginRight: '15px' }}>管理面板</Link>
       </div>
       
       <div>
