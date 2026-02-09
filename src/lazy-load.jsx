@@ -528,9 +528,9 @@ export function Dashboard() {}`}
 
 // ==================== 8. 主应用 ====================
 
-function App() {
+function App({ basename = '/' }) {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <div style={{ minHeight: '100vh', background: '#fafafa' }}>
         {/* 导航栏 */}
         <nav style={{ 

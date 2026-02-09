@@ -19,7 +19,7 @@ const demos = [
     tags: ['Outlet', '动态路由', 'useParams'],
     component: NestedRouterApp,
     entryPath: '/nested',
-    demoProps: { basename: '/nested' }
+    routerBasename: 'entry'
   },
   {
     id: 'auth',
@@ -32,7 +32,7 @@ const demos = [
     tags: ['ProtectedRoute', 'Context', 'RBAC'],
     component: AuthGuardApp,
     entryPath: '/auth',
-    demoProps: { basename: '/auth' }
+    routerBasename: 'entry'
   },
   {
     id: 'lazy',
@@ -44,7 +44,8 @@ const demos = [
     gradient: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
     tags: ['React.lazy', 'Suspense', '代码分割'],
     component: LazyLoadApp,
-    entryPath: '/lazy-load'
+    entryPath: '/lazy-load',
+    routerBasename: 'base'
   },
   {
     id: 'programmatic',
@@ -56,7 +57,8 @@ const demos = [
     gradient: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
     tags: ['useNavigate', 'state', 'replace'],
     component: ProgrammaticNavApp,
-    entryPath: '/programmatic-nav'
+    entryPath: '/programmatic-nav',
+    routerBasename: 'base'
   },
   {
     id: 'cache',
@@ -69,7 +71,7 @@ const demos = [
     tags: ['Keep-Alive', '状态缓存', 'display:none'],
     component: RouteCacheApp,
     entryPath: '/cache',
-    demoProps: { basename: '/cache' }
+    routerBasename: 'entry'
   }
 ];
 
@@ -83,6 +85,14 @@ function withBasePath(pathname) {
   }
 
   return `${base}${normalizedPath}`.replace(/\/{2,}/g, '/');
+}
+
+function toRouterBasename(pathname) {
+  const fullPath = withBasePath(pathname);
+  if (fullPath === '/') {
+    return '/';
+  }
+  return fullPath.replace(/\/+$/, '');
 }
 
 function syncBrowserPath(pathname) {
@@ -369,7 +379,13 @@ function DemoWrapper({ demoId, onBack }) {
   }
 
   const DemoComponent = demo.component;
-  const demoProps = demo.demoProps || {};
+  let basename;
+  if (demo.routerBasename === 'entry') {
+    basename = toRouterBasename(demo.entryPath || '/');
+  } else if (demo.routerBasename === 'base') {
+    basename = toRouterBasename('/');
+  }
+  const demoProps = basename ? { basename } : {};
 
   return (
     <div style={{ position: 'relative' }}>
