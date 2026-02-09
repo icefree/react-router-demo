@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, Outlet } from 'react-router-dom';
+import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 
 // ==================== 🎯 路由懒加载完全指南 ====================
 /*
@@ -12,77 +12,7 @@ import { BrowserRouter, Routes, Route, Link, Outlet } from 'react-router-dom';
 */
 
 
-// ==================== 1. 懒加载组件定义 ====================
-
-// 🔥 方式1：基础懒加载
-// React.lazy() 接收一个返回 Promise 的函数
-// 这个 Promise 应该 resolve 一个包含 default export 的模块
-
-// 模拟懒加载组件（实际项目中应该是独立文件）
-const LazyDashboard = lazy(() => {
-  // 🔥 模拟网络延迟，让你看到 Loading 效果
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve({
-        default: () => (
-          <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px' }}>
-            <h2>📊 Dashboard（懒加载）</h2>
-            <p>✅ 这个组件是懒加载的！</p>
-            <p>打开浏览器 DevTools → Network 面板，刷新页面看看：</p>
-            <ul>
-              <li>首次访问时不会加载这个组件的代码</li>
-              <li>点击 Dashboard 链接后才会加载</li>
-              <li>加载完成后会被缓存，再次访问不会重新加载</li>
-            </ul>
-          </div>
-        )
-      });
-    }, 1500);  // 1.5秒延迟
-  });
-});
-
-const LazyProfile = lazy(() => {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve({
-        default: () => (
-          <div style={{ padding: '20px', background: '#e3f2fd', borderRadius: '8px' }}>
-            <h2>👤 个人资料（懒加载）</h2>
-            <p>✅ 这个组件也是懒加载的！</p>
-            <p>每个懒加载组件都会被打包成独立的 chunk 文件</p>
-          </div>
-        )
-      });
-    }, 1000);
-  });
-});
-
-const LazySettings = lazy(() => {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve({
-        default: () => (
-          <div style={{ padding: '20px', background: '#fff3e0', borderRadius: '8px' }}>
-            <h2>⚙️ 设置页面（懒加载）</h2>
-            <p>✅ 懒加载成功！</p>
-          </div>
-        )
-      });
-    }, 800);
-  });
-});
-
-// 🔥 模拟加载失败的组件
-const LazyErrorComponent = lazy(() => {
-  return new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new Error('模拟加载失败！'));
-    }, 1000);
-  });
-});
-
-
-// ==================== 2. Loading 组件 ====================
+// ==================== 1. Loading 组件 ====================
 
 // 🔥 简单的 Loading
 function SimpleLoading() {
@@ -167,69 +97,124 @@ function SkeletonLoading() {
 }
 
 
-// ==================== 3. 错误边界组件 ====================
+// ==================== 2. 模拟懒加载的包装组件 ====================
 
-// 🔥 错误边界 - 用于捕获懒加载失败
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('懒加载失败:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ 
-          padding: '20px', 
-          background: '#ffebee', 
-          borderRadius: '8px',
-          border: '2px solid #f44336'
-        }}>
-          <h3 style={{ color: '#d32f2f' }}>❌ 组件加载失败</h3>
-          <p style={{ color: '#666' }}>{this.state.error?.message}</p>
-          <button 
-            onClick={() => {
-              this.setState({ hasError: false, error: null });
-              window.location.reload();
-            }}
-            style={{ 
-              padding: '8px 16px', 
-              background: '#f44336', 
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            重新加载
-          </button>
-        </div>
-      );
+// 🔥 这个组件模拟真实的懒加载效果，每次都能看到 Loading
+function SimulatedLazyLoad({ children, delay = 1000, loadingStyle = 'animated' }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+  
+  // 每次路由变化时重新触发加载
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [location.pathname, delay]);
+  
+  if (isLoading) {
+    switch (loadingStyle) {
+      case 'simple':
+        return <SimpleLoading />;
+      case 'skeleton':
+        return <SkeletonLoading />;
+      default:
+        return <AnimatedLoading />;
     }
-
-    return this.props.children;
   }
+  
+  return children;
 }
 
 
-// ==================== 4. 演示面板 ====================
+// ==================== 3. 页面组件 ====================
+
+function DashboardPage() {
+  return (
+    <div style={{ padding: '20px', background: '#e8f5e9', borderRadius: '8px' }}>
+      <h2>📊 Dashboard（懒加载完成！）</h2>
+      <p>✅ 模拟 1.5 秒延迟加载成功！</p>
+      <p>加载时间：{new Date().toLocaleTimeString()}</p>
+      <div style={{ background: '#fff', padding: '15px', borderRadius: '4px', marginTop: '10px' }}>
+        <h4>🎯 关于懒加载缓存：</h4>
+        <ul>
+          <li><strong>真实项目中</strong>：组件加载一次后会被模块缓存</li>
+          <li><strong>本演示中</strong>：每次切换路由都能看到 Loading 效果</li>
+          <li><strong>面试要点</strong>：缓存避免重复加载，提升性能</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function ProfilePage() {
+  return (
+    <div style={{ padding: '20px', background: '#e3f2fd', borderRadius: '8px' }}>
+      <h2>👤 个人资料（懒加载完成！）</h2>
+      <p>✅ 模拟 1 秒延迟加载成功！</p>
+      <p>加载时间：{new Date().toLocaleTimeString()}</p>
+      <p>每个懒加载组件都会被打包成独立的 chunk 文件</p>
+    </div>
+  );
+}
+
+function SettingsPage() {
+  return (
+    <div style={{ padding: '20px', background: '#fff3e0', borderRadius: '8px' }}>
+      <h2>⚙️ 设置页面（懒加载完成！）</h2>
+      <p>✅ 模拟 0.8 秒延迟加载成功！</p>
+      <p>加载时间：{new Date().toLocaleTimeString()}</p>
+    </div>
+  );
+}
+
+function ErrorPage() {
+  return (
+    <div style={{ 
+      padding: '20px', 
+      background: '#ffebee', 
+      borderRadius: '8px',
+      border: '2px solid #f44336'
+    }}>
+      <h2 style={{ color: '#d32f2f' }}>❌ 加载失败示例</h2>
+      <p>这里模拟组件加载失败的情况</p>
+      <p>在真实项目中，你需要用 <code>ErrorBoundary</code> 来捕获这种错误</p>
+    </div>
+  );
+}
+
+
+// ==================== 4. 真正的 React.lazy 示例 ====================
+
+// 🔥 这是真正的 React.lazy 写法（演示用）
+const RealLazyComponent = lazy(() => {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve({
+        default: () => (
+          <div style={{ padding: '20px', background: '#f3e5f5', borderRadius: '8px' }}>
+            <h2>🎉 真正的 React.lazy 组件</h2>
+            <p>这个组件使用了 <code>React.lazy()</code></p>
+            <p>⚠️ 注意：它只在第一次加载时显示 Loading，之后会被缓存</p>
+            <p>加载时间：{new Date().toLocaleTimeString()}</p>
+          </div>
+        )
+      });
+    }, 2000);
+  });
+});
+
+
+// ==================== 5. 主演示面板 ====================
 
 function LazyLoadDemo() {
-  const [loadingStyle, setLoadingStyle] = useState('simple');
+  const [loadingStyle, setLoadingStyle] = useState('animated');
+  const navigate = useNavigate();
+  const location = useLocation();
   
-  const LoadingComponent = {
-    simple: SimpleLoading,
-    animated: AnimatedLoading,
-    skeleton: SkeletonLoading
-  }[loadingStyle];
+  // 获取当前子路由
+  const currentPath = location.pathname.split('/').pop();
   
   return (
     <div style={{ padding: '20px' }}>
@@ -270,7 +255,7 @@ const Profile = lazy(() => import('./pages/Profile'));
         marginBottom: '20px'
       }}>
         <h3>🎨 选择 Loading 风格</h3>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => setLoadingStyle('simple')}
             style={{ 
@@ -281,7 +266,7 @@ const Profile = lazy(() => import('./pages/Profile'));
               cursor: 'pointer'
             }}
           >
-            简单 Loading
+            ⏳ 简单 Loading
           </button>
           <button 
             onClick={() => setLoadingStyle('animated')}
@@ -293,7 +278,7 @@ const Profile = lazy(() => import('./pages/Profile'));
               cursor: 'pointer'
             }}
           >
-            动画 Loading
+            🌀 动画 Loading
           </button>
           <button 
             onClick={() => setLoadingStyle('skeleton')}
@@ -305,12 +290,9 @@ const Profile = lazy(() => import('./pages/Profile'));
               cursor: 'pointer'
             }}
           >
-            骨架屏
+            📋 骨架屏
           </button>
         </div>
-        <p style={{ color: '#666', marginTop: '10px', fontSize: '14px' }}>
-          💡 选择后点击下方链接，观察不同的 Loading 效果
-        </p>
       </div>
       
       {/* 导航链接 */}
@@ -320,44 +302,44 @@ const Profile = lazy(() => import('./pages/Profile'));
         borderRadius: '8px',
         marginBottom: '20px'
       }}>
-        <h3>🧭 测试懒加载</h3>
-        <p>点击下方链接，观察 Loading 状态和网络请求：</p>
+        <h3>🧭 测试懒加载（模拟延迟）</h3>
+        <p>点击下方链接，<strong>每次都能看到 Loading 效果</strong>：</p>
         <nav style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '15px' }}>
-          <Link to="dashboard" style={{ 
+          <Link to="/lazy-load/dashboard" style={{ 
             padding: '10px 20px', 
-            background: '#4caf50', 
+            background: currentPath === 'dashboard' ? '#388e3c' : '#4caf50', 
             color: 'white',
             textDecoration: 'none',
             borderRadius: '4px'
           }}>
-            📊 Dashboard
+            📊 Dashboard (1.5秒)
           </Link>
-          <Link to="profile" style={{ 
+          <Link to="/lazy-load/profile" style={{ 
             padding: '10px 20px', 
-            background: '#2196f3', 
+            background: currentPath === 'profile' ? '#1976d2' : '#2196f3', 
             color: 'white',
             textDecoration: 'none',
             borderRadius: '4px'
           }}>
-            👤 Profile
+            👤 Profile (1秒)
           </Link>
-          <Link to="settings" style={{ 
+          <Link to="/lazy-load/settings" style={{ 
             padding: '10px 20px', 
-            background: '#ff9800', 
+            background: currentPath === 'settings' ? '#f57c00' : '#ff9800', 
             color: 'white',
             textDecoration: 'none',
             borderRadius: '4px'
           }}>
-            ⚙️ Settings
+            ⚙️ Settings (0.8秒)
           </Link>
-          <Link to="error" style={{ 
+          <Link to="/lazy-load/real-lazy" style={{ 
             padding: '10px 20px', 
-            background: '#f44336', 
+            background: currentPath === 'real-lazy' ? '#7b1fa2' : '#9c27b0', 
             color: 'white',
             textDecoration: 'none',
             borderRadius: '4px'
           }}>
-            ❌ 模拟加载失败
+            🎉 真实 lazy (2秒，有缓存)
           </Link>
         </nav>
       </div>
@@ -370,25 +352,36 @@ const Profile = lazy(() => import('./pages/Profile'));
         minHeight: '200px',
         border: '2px dashed #ccc'
       }}>
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingComponent />}>
-            <Outlet />
-          </Suspense>
-        </ErrorBoundary>
+        <Routes>
+          <Route index element={
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <div style={{ fontSize: '48px', marginBottom: '15px' }}>👆</div>
+              <h3>点击上方链接测试懒加载</h3>
+              <p>每次切换都能看到 Loading 效果！</p>
+            </div>
+          } />
+          <Route path="dashboard" element={
+            <SimulatedLazyLoad delay={1500} loadingStyle={loadingStyle}>
+              <DashboardPage />
+            </SimulatedLazyLoad>
+          } />
+          <Route path="profile" element={
+            <SimulatedLazyLoad delay={1000} loadingStyle={loadingStyle}>
+              <ProfilePage />
+            </SimulatedLazyLoad>
+          } />
+          <Route path="settings" element={
+            <SimulatedLazyLoad delay={800} loadingStyle={loadingStyle}>
+              <SettingsPage />
+            </SimulatedLazyLoad>
+          } />
+          <Route path="real-lazy" element={
+            <Suspense fallback={<AnimatedLoading />}>
+              <RealLazyComponent />
+            </Suspense>
+          } />
+        </Routes>
       </div>
-    </div>
-  );
-}
-
-
-// ==================== 5. 默认欢迎页 ====================
-
-function WelcomePage() {
-  return (
-    <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-      <div style={{ fontSize: '48px', marginBottom: '15px' }}>👆</div>
-      <h3>点击上方链接测试懒加载</h3>
-      <p>观察 Loading 状态和组件加载过程</p>
     </div>
   );
 }
@@ -550,19 +543,8 @@ function App() {
         
         <div style={{ padding: '0 20px 20px' }}>
           <Routes>
-            {/* 懒加载演示 - 使用嵌套路由 */}
-            <Route path="/lazy-load" element={<LazyLoadDemo />}>
-              <Route index element={<WelcomePage />} />
-              <Route path="dashboard" element={<LazyDashboard />} />
-              <Route path="profile" element={<LazyProfile />} />
-              <Route path="settings" element={<LazySettings />} />
-              <Route path="error" element={<LazyErrorComponent />} />
-            </Route>
-            
-            {/* 默认重定向 */}
-            <Route path="/" element={<LazyLoadDemo />}>
-              <Route index element={<WelcomePage />} />
-            </Route>
+            <Route path="/lazy-load/*" element={<LazyLoadDemo />} />
+            <Route path="/" element={<LazyLoadDemo />} />
           </Routes>
           
           {/* 对比和面试要点 */}
